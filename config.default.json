@@ -1,0 +1,28 @@
+{
+    "botToken": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
+    "sendTo": "-1111111111",
+    "apiUrl": "https://api.uybor.uz/api/v1/listings",
+    "listingUrl": "https://uybor.uz/listings/",
+    "delayCooldown": 300,
+    "delayBetweenIterations": 20,
+    "delayBetweenMessages": 2,
+    "defaultQueryParams": {
+        "mode": "search",
+        "limit": "60",
+        "embed": "category,subCategory,residentialComplex,media,region,city,district,zone,street,metro",
+        "order": "upAt",
+        "operationType__eq": "rent",
+        "priceCurrency__eq": "usd",
+        "room__in": "1,2,3",
+        "price__lte": "700",
+        "price__gte": "400"
+    },
+    "queries": [
+        {
+            "search": "город Ташкент, Мирабадский район"
+        },
+        {
+            "search": "город Ташкент, Шайхантахурский район"
+        }
+    ]
+}

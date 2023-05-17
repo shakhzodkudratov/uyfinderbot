@@ -1,48 +1,80 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { JsonDB, Config } = require('node-json-db');
+const fs = require('fs')
 
-var db = new JsonDB(new Config("listings", true, false, '/'));
-
-const apiUrl = 'https://api.uybor.uz/api/v1/listings?mode=search&limit=60&embed=category,subCategory,residentialComplex,media,region,city,district,zone,street,metro&order=upAt&operationType__eq=rent&priceCurrency__eq=usd&category__eq=7&room__in=1,2,3&price__lte=700&price__gte=400'
-
-// replace the value below with the Telegram token you receive from @BotFather
-const token = '6075120064:AAFLfjZmNCgbOUERR8oUSP3W9OjYhIQyr6k';
-
-const group = -1001874078405
-
-// Create a bot that uses 'polling' to fetch new updates
-const bot = new TelegramBot(token, {polling: true});
-
-async function update() {
-    console.log('updating', new Date().toUTCString())
-    const response = await fetch(apiUrl)
-    const results = (await response.json()).results
-    
-    const listed = await db.getData('/listed') ?? []
-
-    results.forEach(result => {
-        if (listed.includes(result.id)) {
-            return
-        }
-
-        const url = 'https://uybor.uz/listings/' + result.id
-
-        bot.sendMessage(group, `New listing ${url}`)
-        listed.push(result.id)
-    })
-
-    console.log('update finished', new Date().toUTCString())
-    await db.push('/listed', listed, true)
+try {
+    fs.readFileSync('listings.json')
+} catch {
+    fs.writeFileSync('listings.json', JSON.stringify({ listed: [] }))
 }
 
-setInterval(() => update(), 5 * 60 * 1000)
+const db = new JsonDB(new Config("listings", true, false, '/'))
+
+const configDefault = require('./config.default.json')
+const configCustom = require('./config.json')
+const config = Object.assign({}, configDefault, configCustom)
+
+const bot = new TelegramBot(config.botToken, {polling: true})
+
+async function update() {
+    try {
+        console.log('updating', new Date().toUTCString())
+        const listed = await db.getData('/listed') ?? []
+
+        for (const query of config.queries) {
+            const response = await fetch(buildApiUrl(query))
+            const results = (await response.json()).results
+
+            for (const result of results) {
+                if (listed.includes(result.id)) {
+                    return
+                }
+                
+                await delay(config.delayBetweenMessages)
+
+                const url = config.listingUrl + result.id
+                await bot.sendMessage(config.sendTo, `New listing ${url}`)
+
+                listed.push(result.id)
+                await db.push('/listed', listed, true)
+            }
+
+            await delay(config.delayBetweenIterations)
+        }
+
+        console.log('update finished', new Date().toUTCString())
+    } catch (e) {
+        console.error(e)
+        console.log('update failed', new Date().toUTCString())
+    }
+
+    setTimeout(() => update(), config.delayCooldown * 1000)
+}
+
 update()
 
-// Listen for any kind of message. There are different kinds of
-// messages.
-bot.on('message', (msg) => {
-  const chatId = msg.chat.id;
+function buildApiUrl(extraParams = {}) {
+    const query = new URLSearchParams()
 
-  // send a message to the chat acknowledging receipt of their message
-//   bot.sendMessage(chatId, 'Received your message');
-});
+    for (const key in config.defaultQueryParams) {
+        query.append(key, formatUrlParamValue(config.defaultQueryParams[key]))
+    }
+
+    for (const key in extraParams) {
+        query.append(key, formatUrlParamValue(extraParams[key]))
+    }
+
+    return config.apiUrl + '?' + query.toString()
+}
+
+function delay(timesec = 1) {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve()
+        }, timesec * 1000)
+    })
+}
+
+function formatUrlParamValue(value) {
+    return value.replaceAll(' ', '+')
+}
