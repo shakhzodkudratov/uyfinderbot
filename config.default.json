@@ -5,7 +5,7 @@
     "listingUrl": "https://uybor.uz/listings/",
     "delayCooldown": 300,
     "delayBetweenIterations": 20,
-    "delayBetweenMessages": 2,
+    "delayBetweenMessages": 6,
     "defaultQueryParams": {
         "mode": "search",
         "limit": "60",
