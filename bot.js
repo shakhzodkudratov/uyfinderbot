@@ -27,7 +27,7 @@ async function update() {
 
             for (const result of results) {
                 if (listed.includes(result.id)) {
-                    return
+                    continue
                 }
                 
                 await delay(config.delayBetweenMessages)
